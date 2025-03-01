@@ -1,6 +1,6 @@
 # In-Spectre Firmware
 
-This firmware runs on the Heltec ESP32 WiFi LoRa 32 V3 board and communicates with AS7263 and AS7265X spectral sensors via I2C. It sends the collected data to a Flask API server using MQTT.
+This firmware runs on the Heltec ESP32 WiFi LoRa 32 V3 board and communicates with AS7263 and AS7265X spectral sensors via I2C. It can send data via USB serial or MQTT over WiFi.
 
 ## Hardware Setup
 
@@ -39,28 +39,52 @@ Connect the components as follows:
    - SDA to TCA9548A SC1
    - SCL to TCA9548A SD1
 
-## Communication Setup
+## Communication Options
 
-The firmware uses two separate communication systems:
+The firmware supports two communication methods:
 
-1. **WiFi**: Connects the ESP32 to your existing WiFi network
-2. **MQTT**: Messaging protocol that runs over the WiFi connection
+### 1. Serial-over-USB (Recommended for Quick Setup)
+- Connect the ESP32 to your computer via USB
+- No additional setup required - works out of the box
+- Data is streamed as JSON over the USB serial connection
+- Set `USE_SERIAL_MODE` to `true` in the firmware
 
-### WiFi Configuration
-The ESP32 connects to your existing WiFi network (like your home router). You need to provide:
-- `ssid`: The name of your WiFi network (e.g., "HomeNetwork")
-- `password`: Your WiFi password
+### 2. MQTT over WiFi
+- ESP32 connects to your WiFi network and an MQTT broker
+- More complex setup but allows wireless operation
+- Set `USE_SERIAL_MODE` to `false` in the firmware
 
-This allows the ESP32 to connect to the internet through your existing router.
+## Configuration
 
-### MQTT Configuration
-MQTT is a lightweight messaging protocol that runs over the WiFi connection. You need to set up:
+Before uploading the firmware, update the settings in `in_spectre.ino`:
 
-1. **MQTT Broker on your laptop/server**:
-   - Install Mosquitto MQTT broker on your laptop or server:
-     - **Windows**: Download from https://mosquitto.org/download/
-     - **macOS**: `brew install mosquitto`
-     - **Linux**: `sudo apt install mosquitto`
+1. Set communication mode:
+   ```cpp
+   #define USE_SERIAL_MODE true   // Use USB Serial (easy setup)
+   // #define USE_SERIAL_MODE false  // Use MQTT over WiFi
+   ```
+
+2. If using MQTT mode, configure WiFi and MQTT:
+   ```cpp
+   const char* ssid = "YOUR_WIFI_SSID";     // Your home/office WiFi name
+   const char* password = "YOUR_WIFI_PASSWORD";  // Your WiFi password
+   const char* mqtt_server = "YOUR_LAPTOP_IP_ADDRESS";  // e.g., "192.168.1.5"
+   const int mqtt_port = 1883;  // Default MQTT port
+   ```
+
+3. Update interval if needed:
+   ```cpp
+   const unsigned long updateInterval = 5000; // milliseconds
+   ```
+
+## MQTT Setup (Only for MQTT Mode)
+
+If you're using MQTT mode, you'll need to:
+
+1. **Install MQTT Broker on your laptop/server**:
+   - **Windows**: Download Mosquitto from https://mosquitto.org/download/
+   - **macOS**: `brew install mosquitto`
+   - **Linux**: `sudo apt install mosquitto`
 
 2. **Configure the broker**:
    - Edit mosquitto.conf to allow connections:
@@ -77,40 +101,15 @@ MQTT is a lightweight messaging protocol that runs over the WiFi connection. You
    - **macOS/Linux**: Run `ifconfig` or `ip addr` in Terminal
    - Use the IP address of your WiFi or Ethernet interface (usually starts with 192.168.x.x)
 
-4. **Configure the ESP32**:
-   - Set `mqtt_server` to your laptop's IP address (e.g., "192.168.1.5")
-   - Set `mqtt_port` to 1883 (default MQTT port)
+## Testing Communication
 
-### Complete Data Flow
-1. ESP32 connects to your WiFi network
-2. ESP32 connects to MQTT broker running on your laptop
-3. ESP32 reads sensor data and publishes to MQTT topics
-4. Flask API (also on your laptop) subscribes to these topics
-5. Web clients request data from the Flask API
+### Testing Serial Mode
+1. Connect the ESP32 to your computer via USB
+2. Open a serial monitor (Arduino IDE, PlatformIO, or separate app)
+3. Set baud rate to 115200
+4. You should see JSON-formatted data appearing at regular intervals
 
-## Configuration
-
-Before uploading the firmware, update the following settings in `in_spectre.ino`:
-
-1. WiFi credentials (your existing WiFi network):
-   ```cpp
-   const char* ssid = "YOUR_WIFI_SSID";     // Your home/office WiFi name
-   const char* password = "YOUR_WIFI_PASSWORD";  // Your WiFi password
-   ```
-
-2. MQTT broker settings (your laptop running Mosquitto):
-   ```cpp
-   const char* mqtt_server = "YOUR_LAPTOP_IP_ADDRESS";  // e.g., "192.168.1.5"
-   const int mqtt_port = 1883;  // Default MQTT port
-   ```
-
-3. Update interval (if needed):
-   ```cpp
-   const unsigned long updateInterval = 5000; // milliseconds
-   ```
-
-## Testing MQTT Communication
-
+### Testing MQTT Mode
 You can test if the MQTT communication is working using command-line tools:
 
 1. **Subscribe to test topics** (on your laptop):
@@ -122,16 +121,17 @@ You can test if the MQTT communication is working using command-line tools:
    mosquitto_sub -h localhost -t "sensor/as7265x" -v
    ```
 
-2. **Monitor the data** published by the ESP32 - you should see JSON messages appearing whenever the ESP32 publishes new sensor readings.
+2. **Monitor the data** published by the ESP32
 
 ## Installation
 
 ### Requirements
 - Arduino IDE or PlatformIO
 - Heltec ESP32 board support
-- PubSubClient library
-- ArduinoJson library
-- Wire library
+- Required libraries:
+  - PubSubClient (for MQTT)
+  - ArduinoJson
+  - Wire (I2C)
 
 ### Arduino IDE Setup
 1. Install the Arduino IDE
@@ -140,36 +140,35 @@ You can test if the MQTT communication is working using command-line tools:
    https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/releases/download/0.0.1/package_heltec_esp32_index.json
    ```
 3. Install the Heltec ESP32 Series boards via Board Manager
-4. Install required libraries via Library Manager:
-   - PubSubClient
-   - ArduinoJson
+4. Install required libraries via Library Manager
 5. Select the board "Heltec WiFi LoRa 32(V3)"
 6. Configure upload speed: 921600
 7. Select the correct COM port
 8. Click Upload
 
-## Operation
+## Flask API Configuration
 
-After uploading the firmware, the device will:
+The Flask API can be configured to use either communication method:
 
-1. Initialize the display and show the startup screen
-2. Initialize the I2C sensors
-3. Connect to WiFi
-4. Connect to the MQTT broker
-5. Begin taking measurements every 5 seconds
-6. Publish data to MQTT topics:
-   - `sensor/as7263` for NIR data
-   - `sensor/as7265x` for full spectral data
+### Serial Mode
+```
+python run.py --mode serial --serial-port /dev/ttyUSB0
+```
 
-The OLED display will show the current status of the sensors and connections.
+### MQTT Mode
+```
+python run.py --mode mqtt --mqtt-broker localhost
+```
 
 ## Troubleshooting
 
 - If sensors fail to initialize, check your I2C wiring
-- If WiFi connection fails, verify credentials and ensure your ESP32 is within range of your router
-- If MQTT connection fails:
-  - Check that your laptop IP address is correct
-  - Verify that the Mosquitto broker is running on your laptop
-  - Make sure your laptop firewall allows connections to port 1883
-  - Ensure both devices are on the same WiFi network
-- Check the serial monitor (115200 baud) for detailed debugging information
+- If using Serial mode and no data appears:
+  - Verify the correct port is selected
+  - Check baud rate (115200)
+  - Try pressing the reset button on the ESP32
+- If using MQTT mode and no data appears:
+  - Ensure WiFi credentials are correct
+  - Verify MQTT broker is running and accessible
+  - Check your laptop's firewall settings
+- Check the serial monitor and OLED display for status information

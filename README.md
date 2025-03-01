@@ -9,33 +9,46 @@ In-Spectre connects spectral sensors to a Flask API, enabling real-time monitori
 - **Heltec ESP32 WiFi LoRa 32 V3**: Microcontroller with WiFi connectivity
 - **AS7263**: 6-channel NIR spectral sensor (610-860nm)
 - **AS7265X**: 18-channel spectral sensor covering UV to NIR (410-940nm)
-- **MQTT**: For communication between microcontroller and API
+- **Flexible Communication**: USB Serial or MQTT over WiFi
 - **Flask API**: Provides RESTful endpoints for accessing sensor data
 
 ## Project Structure
 
 ```
 in-spectre/
- api/                  # Python Flask backend
-    routes/           # API endpoints
-    models/           # Data models
-    services/         # Business logic
-    utils/            # Helper functions
- firmware/             # Arduino code for ESP32
- tests/                # Test suite
- docs/                 # Documentation
- requirements.txt      # Python dependencies
+├── api/                  # Python Flask backend
+│   ├── routes/           # API endpoints
+│   ├── models/           # Data models
+│   ├── services/         # Business logic (MQTT & Serial)
+│   └── utils/            # Helper functions
+├── firmware/             # Arduino code for ESP32
+│   └── sensors/          # Sensor libraries
+├── tests/                # Test suite
+├── docs/                 # Documentation
+└── requirements.txt      # Python dependencies
 ```
 
-## Getting Started
+## Key Features
 
-### Prerequisites
+- **Dual Communication Modes**:
+  - **USB Serial**: Simple plug-and-play for direct connection
+  - **MQTT**: Wireless operation over WiFi
 
-- Python 3.9+
-- Arduino IDE or PlatformIO
-- MQTT Broker (e.g., Mosquitto)
-- AS7263 and AS7265X sensors
-- Heltec ESP32 WiFi LoRa 32 V3 board
+- **Comprehensive Spectral Data**: 
+  - 6 channels from AS7263 (NIR)
+  - 18 channels from AS7265X (UV to NIR)
+
+- **Flexible API**: 
+  - RESTful endpoints for data access
+  - Dynamic switching between communication modes
+
+## Quick Start
+
+### Hardware Setup
+
+1. Connect the sensors to the ESP32 using the TCA9548A I2C multiplexer
+2. Flash the firmware to the ESP32 (Serial mode is enabled by default)
+3. Connect the ESP32 to your computer via USB
 
 ### API Setup
 
@@ -50,21 +63,13 @@ in-spectre/
    pip install -r requirements.txt
    ```
 
-3. Start the Flask server:
+3. Start the Flask server in serial mode:
    ```
-   flask run --debug
+   python run.py --mode serial --serial-port [YOUR_PORT]
    ```
+   Replace `[YOUR_PORT]` with the actual port (e.g., `/dev/ttyUSB0` or `COM3`)
 
-### Firmware Setup
-
-1. Open the Arduino IDE
-2. Install the required libraries:
-   - Heltec ESP32 board support
-   - PubSubClient
-   - ArduinoJson
-3. Open `firmware/in_spectre.ino`
-4. Update the WiFi and MQTT settings
-5. Upload to your Heltec board
+4. Access the API at http://localhost:5000/api/sensors/status
 
 ## API Endpoints
 
@@ -72,3 +77,14 @@ in-spectre/
 - `GET /api/sensors/as7263` - Get data from AS7263 NIR sensor
 - `GET /api/sensors/as7265x` - Get data from AS7265X sensor
 - `GET /api/sensors/all` - Get data from all sensors
+- `GET /api/sensors/ports` - List available serial ports
+- `GET /api/sensors/mode` - Get current communication mode
+- `POST /api/sensors/mode` - Set communication mode
+
+## License
+
+MIT
+
+## Contributors
+
+- inSpectral Gadget
