@@ -77,10 +77,12 @@ in-spectre/
 - `GET /api/sensors/mode` - Get current communication mode
 - `POST /api/sensors/mode` - Set communication mode
 
-## License
+## Notes
 
-MIT
+```
 
-## Contributors
+the heltec board sucks for i2c breakouts and i burnt the OLED screen
 
-- inSpectral Gadget
+will explore new hardware setup
+
+```
