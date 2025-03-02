@@ -1,14 +1,28 @@
 # In-Spectre Firmware
 
-This firmware runs on the Heltec ESP32 WiFi LoRa 32 V3 board and communicates with AS7263 and AS7265X spectral sensors via I2C. It can send data via USB serial or MQTT over WiFi.
+This firmware runs on the Heltec ESP32 WiFi LoRa 32 V3 board and communicates with AS726X spectral sensors via I2C. It can send data via USB serial or MQTT over WiFi.
+
+## Required Libraries
+
+Before compiling the firmware, you need to install these libraries:
+
+1. **SparkFun AS726X Arduino Library**: For AS726X spectral sensor support
+   - In Arduino IDE: Tools → Manage Libraries → Search for "SparkFun AS726X" and install it
+   
+2. **PubSubClient**: For MQTT communication
+   - In Arduino IDE: Tools → Manage Libraries → Search for "PubSubClient" by Nick O'Leary
+   
+3. **ArduinoJson**: For JSON formatting
+   - In Arduino IDE: Tools → Manage Libraries → Search for "ArduinoJson" by Benoit Blanchon
+
+4. **Heltec ESP32 Dev-Boards**: 
+   - In Arduino IDE: Tools → Manage Libraries → Search for "Heltec ESP32 Dev-Boards" and install it
 
 ## Hardware Setup
 
 ### Required Components
 - Heltec ESP32 WiFi LoRa 32 V3 board
-- AS7263 NIR spectral sensor breakout
-- AS7265X 18-channel spectral sensor breakout
-- TCA9548A I2C multiplexer (to manage both sensors on the same I2C bus)
+- AS726X spectral sensor breakout (AS7261, AS7262, or AS7263)
 - Connecting wires
 
 ### Wiring
@@ -17,27 +31,29 @@ Connect the components as follows:
 1. **Heltec ESP32 WiFi LoRa 32 V3**:
    - SDA: GPIO 17
    - SCL: GPIO 18
-   - 3.3V to all VCC pins
-   - GND to all GND pins
+   - 3.3V to VCC on the sensor
+   - GND to GND on the sensor
 
-2. **TCA9548A I2C Multiplexer**:
+2. **AS726X Sensor**:
    - VCC to 3.3V
    - GND to GND
    - SDA to ESP32 SDA (GPIO 17)
    - SCL to ESP32 SCL (GPIO 18)
-   - A0, A1, A2 to GND (sets address to 0x70)
 
-3. **AS7263 Sensor**:
-   - VCC to 3.3V
-   - GND to GND
-   - SDA to TCA9548A SC0
-   - SCL to TCA9548A SD0
+## About the Sensors
 
-4. **AS7265X Sensor**:
-   - VCC to 3.3V
-   - GND to GND
-   - SDA to TCA9548A SC1
-   - SCL to TCA9548A SD1
+This project supports any of SparkFun's AS726X spectral sensors:
+
+- **AS7261**: XYZ color sensor with NIR channels
+  - Color coordinates plus NIR, Dark and Clear channels
+
+- **AS7262**: 6-channel Visible light spectral sensor
+  - Wavelengths: 450nm (V), 500nm (B), 550nm (G), 570nm (Y), 600nm (O), 650nm (R)
+  
+- **AS7263**: 6-channel Near-Infrared (NIR) spectral sensor
+  - Wavelengths: 610nm (R), 680nm (S), 730nm (T), 760nm (U), 810nm (V), 860nm (W)
+
+The firmware auto-detects which sensor type is connected and reads the appropriate channels.
 
 ## Communication Options
 
@@ -114,55 +130,38 @@ You can test if the MQTT communication is working using command-line tools:
 
 1. **Subscribe to test topics** (on your laptop):
    ```
-   mosquitto_sub -h localhost -t "sensor/as7263" -v
-   ```
-   In a separate terminal:
-   ```
-   mosquitto_sub -h localhost -t "sensor/as7265x" -v
+   mosquitto_sub -h localhost -t "sensor/spectral" -v
    ```
 
 2. **Monitor the data** published by the ESP32
 
 ## Installation
 
-### Requirements
-- Arduino IDE or PlatformIO
-- Heltec ESP32 board support
-- Required libraries:
-  - PubSubClient (for MQTT)
-  - ArduinoJson
-  - Wire (I2C)
-
 ### Arduino IDE Setup
 1. Install the Arduino IDE
-2. Add ESP32 board support in Preferences -> Additional Board Manager URLs:
-   ```
-   https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/releases/download/0.0.1/package_heltec_esp32_index.json
-   ```
-3. Install the Heltec ESP32 Series boards via Board Manager
-4. Install required libraries via Library Manager
-5. Select the board "Heltec WiFi LoRa 32(V3)"
-6. Configure upload speed: 921600
-7. Select the correct COM port
-8. Click Upload
-
-## Flask API Configuration
-
-The Flask API can be configured to use either communication method:
-
-### Serial Mode
-```
-python run.py --mode serial --serial-port /dev/ttyUSB0
-```
-
-### MQTT Mode
-```
-python run.py --mode mqtt --mqtt-broker localhost
-```
+2. Install the required libraries via Library Manager (see Required Libraries section)
+3. Select the board "Heltec WiFi LoRa 32(V3)"
+4. Configure upload speed: 921600
+5. Select the correct COM port
+6. Click Upload
 
 ## Troubleshooting
 
-- If sensors fail to initialize, check your I2C wiring
+### Compilation Errors
+- **Error: AS726X.h: No such file or directory**:
+  - Install the SparkFun AS726X Arduino Library in Arduino IDE (Tools → Manage Libraries)
+  
+- **Error: PubSubClient.h: No such file or directory**:
+  - Install the PubSubClient library in Arduino IDE (Tools → Manage Libraries)
+  
+- **Error: ArduinoJson.h: No such file or directory**:
+  - Install the ArduinoJson library in Arduino IDE (Tools → Manage Libraries)
+
+- **Error: "heltec.h": No such file or directory**:
+  - Install the Heltec ESP32 Dev-Boards library in Arduino IDE (Tools → Manage Libraries)
+
+### Runtime Issues
+- If sensor fails to initialize, check your I2C wiring
 - If using Serial mode and no data appears:
   - Verify the correct port is selected
   - Check baud rate (115200)
